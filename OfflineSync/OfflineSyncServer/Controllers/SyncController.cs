@@ -20,6 +20,7 @@ namespace OfflineSyncServer.Controllers
 
             object obj = Activator.CreateInstance(constructedClass);
 
+
             MethodInfo method;
             object result = null;
 
@@ -31,7 +32,9 @@ namespace OfflineSyncServer.Controllers
             else
             {
                 method = constructedClass.GetMethod(methodName);
+
                 result = method.Invoke(obj, new object[] { param });
+
             }
 
             return result;
@@ -69,12 +72,11 @@ namespace OfflineSyncServer.Controllers
             try
             {
                 // List<T> tObj = JsonConvert.DeserializeObject<List<T>>(model.Data.ToString());
-
                 return Request.CreateResponse(HttpStatusCode.OK);
             }
             catch (Exception ex)
             {
-                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
             }
         }
     }

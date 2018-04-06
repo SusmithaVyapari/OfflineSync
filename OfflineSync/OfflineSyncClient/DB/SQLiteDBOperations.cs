@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OfflineSync.DomainModel.Models;
 using OfflineSyncClient.Models;
+using System;
 
 namespace OfflineSyncClient.DB
 {
@@ -23,12 +24,27 @@ namespace OfflineSyncClient.DB
             }
         }
 
-        public List<T> GetData<T>() where T : ISyncBaseModel, new()
+        public List<T> GetData<T>(DateTime? lastsync) where T : ISyncBaseModel, new()
+        {
+            DateTime syncTime = lastsync.Value;
+
+            using (SQLiteConnection conn = new SQLiteConnection(_DBPath))
+            {
+                List<T> data = conn.Table<T>().ToList().Where(m => DateTime.Compare(syncTime, m.ModifiedAt) < 0).ToList();
+
+                return data;
+            }
+
+        }
+        public List<T> GetFailedTransactionData<T>() where T : ISyncBaseModel, new()
         {
             using (SQLiteConnection conn = new SQLiteConnection(_DBPath))
             {
-                return conn.Table<T>().ToList();
+                List<T> data = conn.Table<T>().ToList().Where(m => m.IsSynced == false).ToList();
+
+                return data;
             }
+
         }
     }
 }

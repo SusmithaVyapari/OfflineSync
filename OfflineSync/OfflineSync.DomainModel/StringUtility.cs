@@ -1,4 +1,5 @@
-﻿namespace TwoWaySync.DomainModel
+﻿
+namespace OfflineSync.DomainModel
 {
     public static class StringUtility
     {
