@@ -8,8 +8,8 @@ namespace OfflineSync.DomainModel.Models
 {
     public class FailedRecords
     {
-        string SyncID { get; set; }
-        string exceptionmsg { get; set; }
-        bool IsConflictedID { get; set; }
+        public string SyncID { get; set; }
+        public string exceptionmsg { get; set; }
+        public bool IsConflictedID { get; set; }
     }
 }

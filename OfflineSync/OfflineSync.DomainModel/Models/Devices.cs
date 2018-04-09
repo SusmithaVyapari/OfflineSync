@@ -8,8 +8,8 @@ namespace OfflineSync.DomainModel.Models
 {
     public class Devices
     {
-        string DeviceId { get; set; }
-        string DeviceName { get; set; }
-        bool IsConnected { get; set; }
+        public string DeviceId { get; set; }
+        public string DeviceName { get; set; }
+        public bool IsConnected { get; set; }
     }
 }

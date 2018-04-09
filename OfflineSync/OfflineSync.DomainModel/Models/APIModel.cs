@@ -9,7 +9,7 @@ namespace OfflineSync.DomainModel
         public object FailedTrasationData { get; set; }
         public string[] FailedTransactionID { get; set; }
         public object Data { get; set; }
-        public string LastSyncDate { get; set; }
+        public DateTime LastSyncDate { get; set; }
         public string TableName { get; set; }
         public string DeviceID { get; set; }
         public List<FailedRecords> FailedSyncRecords { get; set; }

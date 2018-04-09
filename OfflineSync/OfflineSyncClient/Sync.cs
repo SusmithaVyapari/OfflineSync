@@ -65,24 +65,17 @@ namespace OfflineSyncClient
                     else
                     {
                         data = string.Format(StringUtility.UserAPIGetCall
-                                                  , settings.ControllerName
-                                                  , settings.LastSyncedAt
-                                                  , settings.ControllerData);
+                                                 , settings.ControllerName
+                                                 , settings.LastSyncedAt
+                                                 , settings.ControllerData);
                     }
 
                     SyncAPI syncAPI = new SyncAPI(_baseURL, _token);
-
-                    APIModel model = await syncAPI.Get<APIModel>(data);
-                    List<T> InsertList = new List<T>();
-                    List<T> ModifyList = new List<T>();
-                    List<T> ServerList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<T>>(model.Data.ToString());
-
-
-
+                    APIModel model = null;
+                    // Initial Sync
                     if (settings.LastSyncedAt == null)
                     {
-
-
+                        List<T> ServerList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<T>>(model.Data.ToString());
                         using (SQLiteConnection conn = new SQLiteConnection(_DBPath))
                         {
                             conn.InsertAll(ServerList);
@@ -101,16 +94,63 @@ namespace OfflineSyncClient
                         {
                             context.Update(settings);
                         }
-
                     }
-                    //not initial sync 
                     else
                     {
-                        List<T> UpdatedClientList = _dBOperations.GetData<T>(settings.LastSyncedAt);
                         List<T> FailedTransactionData = _dBOperations.GetFailedTransactionData<T>();
-                        // If there are no failed transactions
+                        if (FailedTransactionData.Count != 0)
+                        {
+                            model.FailedTrasationData = FailedTransactionData;
+                            model.DeviceID = "23456";
+                            model.LastSyncDate = settings.LastSyncedAt.Value;
+                            model.TableName = settings.ServerTableName;
+                        }
                         if (FailedTransactionData.Count == 0)
                         {
+                            model.DeviceID = "23456";
+                            model.LastSyncDate = settings.LastSyncedAt.Value;
+                            model.TableName = settings.ServerTableName;
+                        }
+                        // await syncAPI.Post<T>(model,data);
+                        APIModel modelReturned = await syncAPI.Get<APIModel>(data);
+                        List<T> FailedTransactionIds = Newtonsoft.Json.JsonConvert.DeserializeObject<List<T>>(model.FailedTransactionID.ToString());
+                        List<FailedRecords> FailedSyncRecords = Newtonsoft.Json.JsonConvert.DeserializeObject<List<FailedRecords>>(model.FailedSyncRecords.ToString());
+                        if (FailedTransactionIds != null)
+                        {
+                            foreach (T id in FailedTransactionIds)
+                            {
+                                id.TransactionID = Guid.NewGuid().ToString();
+                            }
+                            using (SQLiteConnection conn = new SQLiteConnection(_DBPath))
+                            {
+                                conn.UpdateAll(FailedTransactionIds);
+                            }
+                        }
+
+                        else if (FailedSyncRecords != null)
+                        {
+                            foreach (FailedRecords id in FailedSyncRecords)
+                            {
+                                if (id.IsConflictedID == true)
+                                {
+                                    id.SyncID = Guid.NewGuid().ToString();
+                                    // update in db.
+                                }
+                                else
+                                {
+                                    string errormessage = id.exceptionmsg;
+                                    //show message to user by any means.
+                                }
+                            }
+
+                        }
+                        List<T> InsertList = new List<T>();
+                        List<T> ModifyList = new List<T>();
+                        List<T> ServerList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<T>>(model.Data.ToString());
+                        List<T> UpdatedClientList = _dBOperations.GetData<T>(settings.LastSyncedAt);
+                        else
+                        { // Normal Sync Operations
+
                             foreach (T item in ServerList)
                             {
                                 // Insert logic
@@ -132,19 +172,15 @@ namespace OfflineSyncClient
                                             {
                                                 ModifyList.Add(item);
                                                 UpdatedClientList.Remove(UpdatedClientList[index]);
-
                                             }
-                                            //else if (DateTime.Compare(item.ModifiedAt, UpdatedClientList[index].ModifiedAt) < 0) break;
                                         }
                                         // Based on server priority
                                         if (settings.Priority == OveridePriority.Server)
                                         {
                                             ModifyList.Add(item);
                                             UpdatedClientList.Remove(UpdatedClientList[index]);
-
                                         }
                                         // Based on Client priority
-                                        //else if (settings.Priority == OveridePriority.Client) break;
                                         // Ask user choice
                                         else
                                         {
@@ -153,32 +189,24 @@ namespace OfflineSyncClient
                                             if (choice == 1)
                                             {
                                                 ModifyList.Add(item);
-
                                                 UpdatedClientList.Remove(UpdatedClientList[index]);
 
                                             }
-                                            //else if (choice == 2) break;
                                         }
                                     }
                                     // If the record is only modifies at the server.(No Conflict)
                                     if (index == -1) ModifyList.Add(item);
                                 }
                             }
-                        }
-                        // There are failed records
-                        else
-                        {
-                            
+
                         }
                         using (SQLiteConnection conn = new SQLiteConnection(_DBPath))
                         {
                             conn.InsertAll(InsertList);
                             conn.UpdateAll(ModifyList);
                         }
-                        Console.WriteLine(settings.LastSyncedAt);
-                        //client list should be sent to server by post
+                        // Client list should be sent to server
                         // getting response from client whether the transaction is succeeded or not.
-
                         // Updating last sync to Latest Modified At.
                         DateTime CurrentTime = DateTime.UtcNow;
                         long minTicks = (CurrentTime - ServerList[0].ModifiedAt).Ticks;
@@ -195,21 +223,17 @@ namespace OfflineSyncClient
                         {
                             context.Update(settings);
                         }
-
                     }
                 }
-            } //try 
+
+
+            }
 
             catch (Exception ex)
             {
                 throw;
             }
 
-
         }
-
-
-
-
     }
 }
